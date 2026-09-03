@@ -161,16 +161,19 @@ def main() -> None:
         with source.open("wb") as output:
             for _ in range(args.size_mib):
                 output.write(block)
-        results = {}
-        samples_by_engine = {}
-        for name, executable in (("legacy-python", args.legacy), ("rust", args.rust)):
-            samples = []
-            for run_number in range(1, args.runs + 1):
+        engines = (("legacy-python", args.legacy), ("rust", args.rust))
+        samples_by_engine = {name: [] for name, _ in engines}
+        execution_order = []
+        for run_number in range(1, args.runs + 1):
+            ordered = engines if run_number % 2 else tuple(reversed(engines))
+            for name, executable in ordered:
                 sample = run_once(executable.resolve(), source)
                 sample["run"] = run_number
-                samples.append(sample)
-            samples_by_engine[name] = samples
-            results[name] = summarize(name, samples)
+                samples_by_engine[name].append(sample)
+                execution_order.append(f"{run_number}:{name}")
+        results = {
+            name: summarize(name, samples_by_engine[name]) for name, _ in engines
+        }
         payload = {
             "method": {
                 "transport": "loopback HTTP",
@@ -181,6 +184,7 @@ def main() -> None:
                 "host_platform": platform.platform(),
                 "host_machine": platform.machine(),
                 "python_version": platform.python_version(),
+                "execution_order": execution_order,
                 "note": "Loopback measures framework ceiling, not real Wi-Fi speed.",
             },
             # Keep `results` as the summary map so existing reports and readers
