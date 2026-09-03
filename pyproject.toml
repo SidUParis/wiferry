@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wiferry"
+version = "0.1.0"
+description = "Local, browser-based file transfer over your Wi-Fi"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Wiferry contributors" }]
+keywords = ["file-transfer", "lan", "wifi", "qr-code", "local-first"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "python-multipart>=0.0.20,<1",
+  "qrcode[pil]>=8,<9",
+  "uvicorn>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = ["build>=1.2,<2", "httpx>=0.28,<1", "pytest>=8,<9", "ruff>=0.11,<1"]
+bundle = ["pyinstaller>=6.12,<7"]
+
+[project.scripts]
+wiferry = "wiferry.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["wiferry*"]
+exclude = ["design*", "frontend*", "tests*"]
+
+[tool.setuptools.package-data]
+wiferry = ["static/index.html", "static/assets/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+ignore = ["B008"] # FastAPI dependency markers intentionally live in signatures.

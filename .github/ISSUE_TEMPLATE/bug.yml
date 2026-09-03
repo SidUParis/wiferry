@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a reproducible Wiferry problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include a live QR link, capability token, or sensitive filename.
+  - type: input
+    id: version
+    attributes:
+      label: Wiferry version
+    validations:
+      required: true
+  - type: dropdown
+    id: host-os
+    attributes:
+      label: Host operating system
+      options: [Linux, macOS arm64, macOS Intel, Windows, Other]
+    validations:
+      required: true
+  - type: input
+    id: guest
+    attributes:
+      label: Guest device and browser
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps and observed result
+    validations:
+      required: true

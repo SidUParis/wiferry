@@ -1,0 +1,118 @@
+name: Native bundles
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-bundles-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_release_tag.py
+
+  bundle:
+    name: Bundle (${{ matrix.platform }}-${{ matrix.arch }})
+    needs: validate-tag
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            executable: target/release/wiferry
+            platform: linux
+            arch: x86_64
+          - os: windows-latest
+            executable: target/release/wiferry.exe
+            platform: windows
+            arch: x86_64
+          - os: macos-15
+            executable: target/release/wiferry
+            platform: macos
+            arch: arm64
+          - os: macos-15-intel
+            executable: target/release/wiferry
+            platform: macos
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - run: rustup toolchain install 1.98.1 --profile minimal --component rustfmt --component clippy
+      - run: rustup default 1.98.1
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint && npm run build
+        working-directory: frontend
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
+      - run: cargo build --release --locked
+      - run: python scripts/smoke_bundle.py "${{ matrix.executable }}"
+      - run: >-
+          python scripts/package_native.py "${{ matrix.executable }}"
+          --output release
+          --expect-platform "${{ matrix.platform }}"
+          --expect-arch "${{ matrix.arch }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wiferry-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub prerelease
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: wiferry-*
+          path: release
+          merge-multiple: true
+      - name: Verify release asset inventory and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          expected=(
+            "wiferry-${version}-linux-x86_64.tar.gz"
+            "wiferry-${version}-windows-x86_64.zip"
+            "wiferry-${version}-macos-arm64.tar.gz"
+            "wiferry-${version}-macos-x86_64.tar.gz"
+          )
+          for archive in "${expected[@]}"; do
+            test -f "release/${archive}"
+            test -f "release/${archive}.sha256"
+            (cd release && sha256sum -c "${archive}.sha256")
+          done
+          test "$(find release -maxdepth 1 -type f | wc -l)" -eq 8
+      - name: Publish prerelease
+        run: gh release create "$GITHUB_REF_NAME" release/* --verify-tag --generate-notes --prerelease --title "Wiferry $GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ github.token }}

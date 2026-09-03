@@ -1,0 +1,8 @@
+recursive-include wiferry/static *
+recursive-include frontend/src *.js *.jsx *.css
+include frontend/index.html frontend/package.json frontend/package-lock.json
+include frontend/vite.config.js frontend/eslint.config.js
+recursive-include scripts *.py
+recursive-include docs *.md
+include README.zh-CN.md SECURITY.md
+include launcher.py wiferry.spec run-wiferry.sh run-wiferry.ps1 run-wiferry.cmd
