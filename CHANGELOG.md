@@ -10,6 +10,7 @@
 - Added zero-copy path sharing from CLI and loopback management UI.
 - Added multi-interface QR address selection.
 - Added reproducible Python-versus-Rust size, startup, RSS, and throughput benchmark.
+- Made embedded frontend timestamps deterministic for repeatable same-environment builds.
 - Prepared native Linux, Windows, macOS arm64, and macOS x86-64 prerelease builds.
 
 ## 0.1.0 - Prototype

@@ -21,7 +21,7 @@ if-addrs = "0.15.0"
 mime_guess = "2.0.5"
 percent-encoding = "2.3.2"
 qrcode = { version = "0.14.1", default-features = false, features = ["svg"] }
-rust-embed = { version = "8.12.0", features = ["mime-guess"] }
+rust-embed = { version = "8.12.0", features = ["deterministic-timestamps", "mime-guess"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 subtle = "2.6.1"
