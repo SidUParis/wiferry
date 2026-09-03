@@ -16,25 +16,25 @@ speed claim.
 - Engines alternate order between runs to reduce time-order bias
 - Reported values are medians; every download was SHA-256 verified
 - The runner does not measure cancellation or active-stream revocation
-- Source revision: `d883a428899c9bfbb2e6139955138cde13663cde`
+- Source revision: `a8f30131feebd61da4ec2c67faee512e7aa266ae`
 - Legacy executable SHA-256: `40b715e5f3447acbdba02fde540407dce617c83f942d8f8e9df4a3bd65f08c58`
-- Rust executable SHA-256: `4f604b7cc853e7ac4ce101497f8081d9883d68d5090fb013bd27f3c1d0c13e38`
+- Rust executable SHA-256: `d0ccd954a087cb4629e6bbe119101a8c1999cd1631b188867a242daad8ca6124`
 
 ## Result
 
 | Metric | Legacy Python bundle | Rust core | Difference |
 |---|---:|---:|---:|
 | Binary size | 22,804,552 B | 2,585,416 B | Rust 88.7% smaller |
-| Ready-to-HTTP | 918.0 ms | 2.7 ms | Rust about 342x faster |
-| Idle process-tree RSS | 61,911,040 B | 4,182,016 B | Rust 93.2% lower |
-| 256 MiB loopback throughput | 922.0 MiB/s | 1,018.5 MiB/s | Rust 10.5% higher in this run |
+| Ready-to-HTTP | 783.5 ms | 2.7 ms | Rust about 287x faster |
+| Idle process-tree RSS | 61,964,288 B | 4,870,144 B | Rust 92.1% lower |
+| 256 MiB loopback throughput | 913.3 MiB/s | 988.1 MiB/s | Rust 8.2% higher in this run |
 
 ## Interpretation
 
 For the exact binaries recorded in this run, Rust materially improves startup,
-resident memory, and distribution size. Its median loopback throughput is 10.5%
-higher here, but the individual samples overlap and vary: 858.9–1,037.2 MiB/s
-for Rust and 543.9–987.7 MiB/s for the legacy bundle. Wiferry therefore describes
+resident memory, and distribution size. Its median loopback throughput is 8.2%
+higher here, but the individual samples overlap and vary: 645.2–1,039.2 MiB/s
+for Rust and 825.8–983.3 MiB/s for the legacy bundle. Wiferry therefore describes
 the Rust core as *lighter and faster to become ready*, not universally faster on
 the network. Real-LAN results must be reported separately before making network
 throughput claims.

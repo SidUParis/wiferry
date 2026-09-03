@@ -38,9 +38,9 @@ On one Ubuntu x86-64 host, using a 256 MiB file and five loopback runs:
 | Metric | Legacy Python bundle | Rust core | Result |
 |---|---:|---:|---:|
 | Binary | 22,804,552 B | 2,585,416 B | Rust 88.7% smaller |
-| Ready to HTTP | 918.0 ms | 2.7 ms | Rust about 342x faster |
-| Idle process-tree RSS | 61,911,040 B | 4,182,016 B | Rust 93.2% lower |
-| Loopback throughput | 922.0 MiB/s | 1,018.5 MiB/s | Rust 10.5% higher in this run |
+| Ready to HTTP | 783.5 ms | 2.7 ms | Rust about 287x faster |
+| Idle process-tree RSS | 61,964,288 B | 4,870,144 B | Rust 92.1% lower |
+| Loopback throughput | 913.3 MiB/s | 988.1 MiB/s | Rust 8.2% higher in this run |
 
 Every download matched SHA-256. This is a framework-ceiling test, not a Wi-Fi
 speed claim. See [`benchmarks/RESULTS-linux-x86_64.md`](benchmarks/RESULTS-linux-x86_64.md)
