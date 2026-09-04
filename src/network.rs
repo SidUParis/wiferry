@@ -239,14 +239,12 @@ fn classify_candidates(
 
     let mut result: Vec<NetworkCandidate> = by_address.into_values().collect();
     result.sort_by_key(|candidate| {
-        let priority = if Some(candidate.address) == routed {
-            0
-        } else if candidate.kind == TransportKind::Lan {
-            1
-        } else {
-            2
+        let transport_priority = match candidate.kind {
+            TransportKind::Lan => 0,
+            TransportKind::Tailscale => 1,
         };
-        (priority, candidate.address)
+        let route_priority = usize::from(Some(candidate.address) != routed);
+        (transport_priority, route_priority, candidate.address)
     });
     result
 }
@@ -320,6 +318,26 @@ mod tests {
                 .kind,
             TransportKind::Lan
         );
+    }
+
+    #[test]
+    fn auto_prefers_lan_even_when_the_default_route_uses_tailscale() {
+        let interfaces = vec![
+            interface("wlan0", "192.168.1.10", "255.255.255.0"),
+            interface("tailscale0", "100.123.32.112", "255.255.255.255"),
+        ];
+        let candidates = classify_candidates(
+            &interfaces,
+            Some("100.123.32.112".parse().unwrap()),
+            &BTreeSet::new(),
+        );
+
+        assert_eq!(candidates[0].kind, TransportKind::Lan);
+        assert_eq!(
+            candidates[0].address,
+            "192.168.1.10".parse::<Ipv4Addr>().unwrap()
+        );
+        assert_eq!(candidates[1].kind, TransportKind::Tailscale);
     }
 
     #[test]

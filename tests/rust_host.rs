@@ -71,7 +71,7 @@ fn spawn_server(sources: &[&Path]) -> Server {
         .unwrap();
     let mut stdout = BufReader::new(child.stdout.take().unwrap());
     let mut management_url = String::new();
-    let mut nearby_url = String::new();
+    let mut guest_url = String::new();
     for _ in 0..8 {
         let mut line = String::new();
         stdout.read_line(&mut line).unwrap();
@@ -79,17 +79,17 @@ fn spawn_server(sources: &[&Path]) -> Server {
         if let Some(value) = line.strip_prefix("Wiferry Rust management:") {
             management_url = value.trim().to_string();
         }
-        if let Some(value) = line.strip_prefix("Nearby devices:") {
-            nearby_url = value.trim().to_string();
+        if let Some(value) = line.strip_prefix("Guest URL:") {
+            guest_url = value.trim().to_string();
         }
-        if !management_url.is_empty() && !nearby_url.is_empty() {
+        if !management_url.is_empty() && !guest_url.is_empty() {
             break;
         }
     }
     assert!(!management_url.is_empty());
-    assert!(!nearby_url.is_empty());
+    assert!(!guest_url.is_empty());
     let (admin_base, admin_token) = management_url.split_once('#').unwrap();
-    let guest_token = nearby_url
+    let guest_token = guest_url
         .trim_end_matches('/')
         .rsplit('/')
         .next()

@@ -108,7 +108,7 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("cannot listen on {guest_address}"))?;
     let admin_url = format!("http://127.0.0.1:{admin_port}/#{}", state.admin_token());
     println!("Wiferry Rust management: {admin_url}");
-    println!("Nearby devices:          {}", state.share_url());
+    println!("Guest URL:               {}", state.share_url());
     println!("Data plane: Rust async streaming · 128 KiB chunks · transport-scoped guard");
     println!("Press Ctrl+C to stop sharing.");
     if !cli.no_browser {

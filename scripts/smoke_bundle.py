@@ -55,12 +55,12 @@ def main() -> None:
             if process.stdout is None:
                 raise RuntimeError("Could not capture bundled server output")
             lines = [process.stdout.readline().strip() for _ in range(3)]
-            nearby_line = next(
-                (line for line in lines if line.startswith("Nearby devices:")), None
+            guest_line = next(
+                (line for line in lines if line.startswith("Guest URL:")), None
             )
-            if nearby_line is None:
-                raise RuntimeError("Bundled server did not print a nearby-device URL:\n" + "\n".join(lines))
-            guest_url = nearby_line.split("Nearby devices:", 1)[1].strip()
+            if guest_line is None:
+                raise RuntimeError("Bundled server did not print a guest URL:\n" + "\n".join(lines))
+            guest_url = guest_line.split("Guest URL:", 1)[1].strip()
             token = guest_url.rstrip("/").rsplit("/", 1)[1]
             deadline = time.time() + 20
             while time.time() < deadline:
