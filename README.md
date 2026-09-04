@@ -8,11 +8,12 @@ tablet, TV, or computer scan an expiring QR capability link and download through
 its normal browser. Use Nearby mode on one LAN or Tailnet mode between devices
 already connected through Tailscale.
 
-> Source status: `0.2.0-alpha.2` candidate. The released alpha.1 passed
+> Source version: `0.2.0-alpha.2`. The released alpha.1 passed
 > [native four-platform CI](https://github.com/SidUParis/wiferry/actions/runs/33819199921).
 > The alpha.2 Tailnet change passed a
 > [real full-file, Range, and transport-scope test](docs/TAILNET_VALIDATION.md)
-> from a second Linux device; its new public matrix is still a release gate.
+> from a second Linux device. Every alpha.2 artifact remains gated on its own
+> public native build and smoke test.
 
 ## Why another LAN file tool?
 

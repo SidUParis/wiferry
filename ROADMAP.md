@@ -18,7 +18,7 @@
 - [x] Scope guest authorization to the selected LAN or Tailnet transport
 - [x] Label LAN/VPN/Tailscale choices and rotate the capability on changes
 - [x] Real second-device Tailnet full-file and Range checksum test
-- [ ] Linux, Windows, and both macOS CI targets for alpha.2
+- [x] Linux, Windows, and both macOS CI targets required before merge/release
 - [ ] Optional MagicDNS and Tailscale Serve HTTPS exploration
 
 ## 0.3: Mobile-first Inbox and Bridge

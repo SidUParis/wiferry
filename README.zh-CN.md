@@ -7,10 +7,11 @@ Windows 主机；主机拖入文件或给出路径，其他手机、平板、电
 临时二维码后即可直接下载，不需要安装 Wiferry 接收端。同一局域网使用
 Nearby；两端已有 Tailscale 时可以通过 Tailnet 跨网络传输。
 
-当前源码为 Rust `0.2.0-alpha.2` 候选版。已发布的 alpha.1 通过了 Linux、
+当前源码版本为 Rust `0.2.0-alpha.2`。已发布的 alpha.1 通过了 Linux、
 Windows、macOS Apple Silicon 与 Intel 的公开 CI；alpha.2 Tailnet 已通过
 第二台 Linux 设备的[完整文件、Range 和传输边界测试](docs/TAILNET_VALIDATION.md)，
-新的四平台 CI 仍是发布门禁。当前 alpha 仍未签名或公证。
+每个 alpha.2 安装包仍必须分别通过原生构建与 smoke test 才能发布。当前
+alpha 仍未签名或公证。
 
 ## 使用
 
