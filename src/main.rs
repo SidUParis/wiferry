@@ -4,7 +4,7 @@ mod state;
 mod web;
 
 use anyhow::Context;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -29,6 +29,9 @@ struct Cli {
     #[arg(long)]
     host_ip: Option<Ipv4Addr>,
 
+    #[arg(long, value_enum, default_value_t = TransportChoice::Auto)]
+    transport: TransportChoice,
+
     #[arg(long)]
     name: Option<String>,
 
@@ -37,6 +40,13 @@ struct Cli {
 
     #[arg(long)]
     no_browser: bool,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum TransportChoice {
+    Auto,
+    Lan,
+    Tailscale,
 }
 
 #[tokio::main]
@@ -56,27 +66,30 @@ async fn main() -> anyhow::Result<()> {
     if !matches!(cli.expiry, 0 | 15 | 30 | 60 | 120) {
         anyhow::bail!("--expiry must be one of: 0, 15, 30, 60, 120");
     }
-    let mut candidates = network::candidates();
-    let host_ip = cli
-        .host_ip
-        .or_else(|| candidates.first().copied())
-        .unwrap_or(Ipv4Addr::LOCALHOST);
-    if !host_ip.is_loopback() && !candidates.contains(&host_ip) {
-        anyhow::bail!("--host-ip must be assigned to this computer: {host_ip}");
+    let probe_tailscale_cli = !matches!(cli.transport, TransportChoice::Lan);
+    let mut candidates = network::candidates(probe_tailscale_cli)
+        .context("cannot enumerate local IPv4 interfaces")?;
+    let requested_transport = match cli.transport {
+        TransportChoice::Auto => None,
+        TransportChoice::Lan => Some(network::TransportKind::Lan),
+        TransportChoice::Tailscale => Some(network::TransportKind::Tailscale),
+    };
+    let host = network::select_candidate(&candidates, cli.host_ip, requested_transport)
+        .map_err(anyhow::Error::msg)?;
+    if !candidates
+        .iter()
+        .any(|candidate| candidate.address == host.address)
+    {
+        candidates.insert(0, host.clone());
     }
-    if !candidates.contains(&host_ip) {
-        candidates.insert(0, host_ip);
-    }
-    let networks = network::interfaces().unwrap_or_default();
     let device_name = cli.name.unwrap_or_else(default_device_name);
     let admin_listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
         .await
         .context("cannot bind the loopback management listener")?;
     let admin_port = admin_listener.local_addr()?.port();
     let state = Arc::new(state::AppState::new(
-        host_ip,
+        host,
         candidates,
-        networks,
         cli.port,
         admin_port,
         device_name,
@@ -95,8 +108,8 @@ async fn main() -> anyhow::Result<()> {
         .with_context(|| format!("cannot listen on {guest_address}"))?;
     let admin_url = format!("http://127.0.0.1:{admin_port}/#{}", state.admin_token());
     println!("Wiferry Rust management: {admin_url}");
-    println!("Nearby devices:          {}", state.share_url());
-    println!("Data plane: Rust async streaming · 128 KiB bounded chunks · LAN guard");
+    println!("Guest URL:               {}", state.share_url());
+    println!("Data plane: Rust async streaming · 128 KiB chunks · transport-scoped guard");
     println!("Press Ctrl+C to stop sharing.");
     if !cli.no_browser {
         let url = admin_url.clone();

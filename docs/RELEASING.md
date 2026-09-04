@@ -1,6 +1,6 @@
 # Releasing Wiferry
 
-Wiferry `0.2.0-alpha.1` is published only by the `Native bundles` GitHub Actions
+Wiferry releases are published only by the `Native bundles` GitHub Actions
 workflow. Do not upload locally built binaries to a public release.
 
 ## Release gate
@@ -9,7 +9,7 @@ workflow. Do not upload locally built binaries to a public release.
 2. Ensure CI passes on Linux x86-64, Windows x86-64, macOS arm64, and macOS
    x86-64.
 3. Create a tag whose exact value is `v` followed by the Cargo package version.
-   For this release, the only accepted tag is `v0.2.0-alpha.1`.
+   For this release, the only accepted tag is `v0.2.0-alpha.2`.
 4. The release workflow rebuilds and tests the frontend and Rust host on each
    native runner. Its smoke test shares a filename containing spaces and Unicode,
    then verifies SHA-256 for both a full download and a cross-chunk HTTP Range.
@@ -24,10 +24,10 @@ workflow. Do not upload locally built binaries to a public release.
 
 ## Expected assets
 
-- `wiferry-0.2.0-alpha.1-linux-x86_64.tar.gz`
-- `wiferry-0.2.0-alpha.1-windows-x86_64.zip`
-- `wiferry-0.2.0-alpha.1-macos-arm64.tar.gz`
-- `wiferry-0.2.0-alpha.1-macos-x86_64.tar.gz`
+- `wiferry-0.2.0-alpha.2-linux-x86_64.tar.gz`
+- `wiferry-0.2.0-alpha.2-windows-x86_64.zip`
+- `wiferry-0.2.0-alpha.2-macos-arm64.tar.gz`
+- `wiferry-0.2.0-alpha.2-macos-x86_64.tar.gz`
 - one adjacent `.sha256` file for each archive
 
 Linux and macOS archives contain `wiferry`; the Windows archive contains

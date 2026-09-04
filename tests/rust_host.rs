@@ -71,7 +71,7 @@ fn spawn_server(sources: &[&Path]) -> Server {
         .unwrap();
     let mut stdout = BufReader::new(child.stdout.take().unwrap());
     let mut management_url = String::new();
-    let mut nearby_url = String::new();
+    let mut guest_url = String::new();
     for _ in 0..8 {
         let mut line = String::new();
         stdout.read_line(&mut line).unwrap();
@@ -79,17 +79,17 @@ fn spawn_server(sources: &[&Path]) -> Server {
         if let Some(value) = line.strip_prefix("Wiferry Rust management:") {
             management_url = value.trim().to_string();
         }
-        if let Some(value) = line.strip_prefix("Nearby devices:") {
-            nearby_url = value.trim().to_string();
+        if let Some(value) = line.strip_prefix("Guest URL:") {
+            guest_url = value.trim().to_string();
         }
-        if !management_url.is_empty() && !nearby_url.is_empty() {
+        if !management_url.is_empty() && !guest_url.is_empty() {
             break;
         }
     }
     assert!(!management_url.is_empty());
-    assert!(!nearby_url.is_empty());
+    assert!(!guest_url.is_empty());
     let (admin_base, admin_token) = management_url.split_once('#').unwrap();
-    let guest_token = nearby_url
+    let guest_token = guest_url
         .trim_end_matches('/')
         .rsplit('/')
         .next()
@@ -160,6 +160,24 @@ fn rejects_zero_as_an_advertised_port() {
 }
 
 #[test]
+fn rejects_loopback_as_an_explicit_tailscale_transport() {
+    let output = Command::new(env!("CARGO_BIN_EXE_wiferry"))
+        .args([
+            "--no-browser",
+            "--transport",
+            "tailscale",
+            "--host-ip",
+            "127.0.0.1",
+            "--port",
+            &free_port().to_string(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("cannot use Tailscale transport"));
+}
+
+#[test]
 fn bundled_host_serves_full_range_head_and_empty_downloads() {
     let temp = tempfile::tempdir().unwrap();
     let source = temp.path().join("hello 世界.txt");
@@ -171,6 +189,24 @@ fn bundled_host_serves_full_range_head_and_empty_downloads() {
     let manifest = state(&server);
     assert_eq!(manifest["deviceName"], "Integration Host");
     assert_eq!(manifest["features"]["rustCore"], true);
+    assert_eq!(manifest["transport"], "lan");
+    assert!(manifest.get("hostCandidates").is_none());
+
+    let admin_manifest_body = client()
+        .get(admin_api(&server, "state"))
+        .header("X-Wiferry-Admin", &server.admin_token)
+        .send()
+        .unwrap()
+        .error_for_status()
+        .unwrap()
+        .text()
+        .unwrap();
+    let admin_manifest: Value = serde_json::from_str(&admin_manifest_body).unwrap();
+    assert_eq!(admin_manifest["transport"], "lan");
+    assert_eq!(admin_manifest["hostIp"], "127.0.0.1");
+    assert_eq!(admin_manifest["hostCandidates"][0]["address"], "127.0.0.1");
+    assert_eq!(admin_manifest["hostCandidates"][0]["kind"], "lan");
+    assert_eq!(admin_manifest["hostCandidates"][0]["label"], "Loopback");
 
     let source_url = format!(
         "{}/files/{}",

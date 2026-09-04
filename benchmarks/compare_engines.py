@@ -78,11 +78,14 @@ def run_once(executable: Path, source: Path) -> dict[str, float | int | str | No
         guest_url = ""
         for _ in range(8):
             line = process.stdout.readline().strip()
-            if line.startswith("Nearby devices:"):
-                guest_url = line.split("Nearby devices:", 1)[1].strip()
+            for prefix in ("Guest URL:", "Nearby devices:"):
+                if line.startswith(prefix):
+                    guest_url = line.split(prefix, 1)[1].strip()
+                    break
+            if guest_url:
                 break
         if not guest_url:
-            raise RuntimeError("Engine did not print a nearby-device URL")
+            raise RuntimeError("Engine did not print a guest URL")
         token = guest_url.rstrip("/").rsplit("/", 1)[1]
         state_url = f"http://127.0.0.1:{port}/api/session/{token}"
         deadline = time.time() + 15

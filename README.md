@@ -1,15 +1,19 @@
 # Wiferry
 
-**One host binary. Any nearby browser. No cloud relay.**
+**One host binary. Any authorized browser. No Wiferry cloud storage.**
 
-Wiferry is an MIT-licensed local-network file delivery tool. Run it on a Linux,
-macOS, or Windows computer, add files by path or drag-and-drop, then let any
-nearby phone, tablet, TV, or computer scan an expiring QR capability link and
-download through its normal browser.
+Wiferry is an MIT-licensed direct file delivery tool. Run it on a Linux, macOS,
+or Windows computer, add files by path or drag-and-drop, then let a phone,
+tablet, TV, or computer scan an expiring QR capability link and download through
+its normal browser. Use Nearby mode on one LAN or Tailnet mode between devices
+already connected through Tailscale.
 
-> Status: `0.2.0-alpha.1`. The Rust host passes native public CI on Linux
-> x86-64, Windows x86-64, macOS Apple Silicon, and macOS Intel. See the
-> [four-platform verification run](https://github.com/SidUParis/wiferry/actions/runs/33819199921).
+> Source version: `0.2.0-alpha.2`. The released alpha.1 passed
+> [native four-platform CI](https://github.com/SidUParis/wiferry/actions/runs/33819199921).
+> The alpha.2 Tailnet change passed a
+> [real full-file, Range, and transport-scope test](docs/TAILNET_VALIDATION.md)
+> from a second Linux device. Every alpha.2 artifact remains gated on its own
+> public native build and smoke test.
 
 ## Why another LAN file tool?
 
@@ -19,12 +23,15 @@ and HTTP Range are not individually novel.
 
 Wiferry focuses on a measurable combination:
 
-- **One installed side:** the host is a small binary; every guest is browser-only.
+- **One installed side:** the host is a small binary; every guest is browser-only
+  with respect to Wiferry. Tailnet guests separately need Tailscale access.
 - **Explicit no-copy path:** CLI and local path entry share the original file in
   place. Browser drag-and-drop remains a bounded local copy because browsers do
   not reveal native paths.
-- **Application-layer LAN guard:** guest requests must originate from an actual
-  local interface subnet; forwarded headers are ignored.
+- **Transport-scoped guard:** Nearby accepts only the selected interface subnet.
+  After confirming the host's Tailscale address, Tailnet admits only loopback or
+  source addresses in Tailscale's `100.64.0.0/10` device range. Tailscale policy
+  remains responsible for peer identity. Forwarded headers are ignored.
 - **Revocable capability:** 192-bit random URL, expiry, rotation, loopback-only
   management, and generation checks that terminate an active response.
 - **Published benchmark:** binary size, cold start, process-tree RSS, throughput,
@@ -33,7 +40,8 @@ Wiferry focuses on a measurable combination:
 
 ## Measured Linux result
 
-On one Ubuntu x86-64 host, using a 256 MiB file and five loopback runs:
+For the `0.2.0-alpha.1` binary on one Ubuntu x86-64 host, using a 256 MiB file
+and five loopback runs:
 
 | Metric | Legacy Python bundle | Rust core | Result |
 |---|---:|---:|---:|
@@ -57,6 +65,15 @@ wiferry report.pdf demo.mp4
 wiferry --file report.pdf --file demo.mp4
 ```
 
+Share through an existing Tailscale network:
+
+```bash
+wiferry --transport tailscale report.pdf
+```
+
+The receiving phone or computer needs Tailscale access to the same tailnet, but
+does not need Wiferry; it still scans the QR and uses its normal browser.
+
 Or start without paths and use the local management page:
 
 ```bash
@@ -67,7 +84,7 @@ The browser interface supports:
 
 - file drag-and-drop or picker, copied locally with a 2 GiB request limit;
 - a loopback-only path field for in-place sharing;
-- QR generation, address selection for VPN/multi-NIC hosts, expiry, rotation,
+- QR generation, labeled LAN/VPN/Tailscale address selection, expiry, rotation,
   removal, and immediate stop.
 
 Useful options:
@@ -75,6 +92,7 @@ Useful options:
 ```text
 --port 8765
 --host-ip 192.168.1.50
+--transport auto|lan|tailscale
 --name "My laptop"
 --expiry 15|30|60|120|0
 --no-browser
@@ -103,13 +121,16 @@ loopback-only port. Its random admin capability is delivered in a launch URL
 fragment, removed from browser history, and required by every management API
 call; it is never embedded in an HTTP response. Management requests also enforce
 an allowlisted loopback `Host` authority, and mutations reject foreign browser origins. Guest
-peers are checked against locally enumerated subnets instead of trusting
-`X-Forwarded-For`.
+peers are checked against the currently selected LAN or Tailnet policy instead
+of trusting `X-Forwarded-For`.
 
-Wiferry 0.2 still uses HTTP because arbitrary phone browsers will not trust a
+Nearby mode still uses HTTP because arbitrary phone browsers will not trust a
 host-generated certificate. Use a trusted home, office, classroom, or personal
-hotspot network. Do not use this alpha for sensitive files on hostile public
-Wi-Fi. A PIN/approval mode and an encrypted protocol are roadmap items.
+hotspot network. Tailnet mode also displays an HTTP URL, but its packets travel
+inside Tailscale's encrypted WireGuard tunnel. DERP may relay packets that remain
+WireGuard-encrypted.
+Wiferry does not provide, operate, or claim that relay. A PIN/approval mode and
+an independent encrypted transport are roadmap items.
 
 ## Repository layout
 
@@ -118,6 +139,7 @@ Wi-Fi. A PIN/approval mode and an encrypted protocol are roadmap items.
 - `benchmarks/`: reproducible legacy-vs-Rust measurements and raw results.
 - `tests/` and `wiferry/`: the Python reference engine and black-box behavior tests.
 - `docs/PRODUCT_SCOPE.md`: scope and acceptance boundary.
+- `docs/TRANSPORTS.md`: Nearby, Tailnet, experimental Tailcat, and mobile model.
 - `.github/workflows/`: three-OS CI and native prerelease packaging.
 
 The Python implementation is retained temporarily as a differential reference.
