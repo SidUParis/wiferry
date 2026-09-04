@@ -47,6 +47,23 @@ function formatTotal(files) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
+function isTailnet(state) {
+  return state?.transport === "tailscale";
+}
+
+function hostCandidates(state) {
+  return (state.hostCandidates || []).map((candidate) => {
+    if (typeof candidate === "string") {
+      return { address: candidate, kind: "lan", label: "LAN / VPN" };
+    }
+    return {
+      address: candidate.address,
+      kind: candidate.kind || "lan",
+      label: candidate.label || (candidate.kind === "tailscale" ? "Tailscale" : "LAN / VPN"),
+    };
+  });
+}
+
 function BrandHeader({ state, mode, onModeChange, guest = false }) {
   return (
     <header className={guest ? "guest-header" : "topbar"}>
@@ -54,7 +71,7 @@ function BrandHeader({ state, mode, onModeChange, guest = false }) {
         Wiferry
       </a>
       {guest ? (
-        <div className="nearby-status"><span />Connected nearby</div>
+        <div className="nearby-status"><span />{isTailnet(state) ? "Connected through Tailscale" : "Connected nearby"}</div>
       ) : (
         <>
           {state?.features?.receive !== false ? <nav className="mode-tabs" aria-label="Transfer mode">
@@ -74,7 +91,7 @@ function BrandHeader({ state, mode, onModeChange, guest = false }) {
           </nav> : <div className="send-label">Send files</div>}
           <div className="wifi-status">
             <span className={state?.active ? "status-dot" : "status-dot inactive"} />
-            {state?.active ? "On this Wi-Fi" : "Sharing stopped"}
+            {state?.active ? (isTailnet(state) ? "On your tailnet" : "On this network") : "Sharing stopped"}
           </div>
         </>
       )}
@@ -179,6 +196,7 @@ function PathEntry({ onAdd }) {
 
 function ConnectionPanel({ state, qrUrl, onStop, onStart, onRotate, onExpiry, onHostIp }) {
   const [copied, setCopied] = useState(false);
+  const candidates = hostCandidates(state);
   const copyUrl = async () => {
     await navigator.clipboard.writeText(state.shareUrl);
     setCopied(true);
@@ -188,7 +206,7 @@ function ConnectionPanel({ state, qrUrl, onStop, onStart, onRotate, onExpiry, on
     <aside className="connection-panel">
       <div className="ticket-top">
         <h2>Scan to connect</h2>
-        <p>Open your camera. No app needed.</p>
+        <p>{isTailnet(state) ? "Open your camera on a device connected to your tailnet." : "Open your camera. No Wiferry app needed."}</p>
         <div className={`qr-wrap${state.active ? "" : " qr-disabled"}`}>
           {qrUrl ? <img src={qrUrl} alt="QR code for this Wiferry session" /> : <div className="qr-loader" />}
         </div>
@@ -206,11 +224,16 @@ function ConnectionPanel({ state, qrUrl, onStop, onStart, onRotate, onExpiry, on
             value={state.hostIp}
             onChange={(event) => onHostIp(event.target.value)}
           >
-            {state.hostCandidates.map((address) => (
-              <option key={address} value={address}>Network · {address}</option>
+            {candidates.map((candidate) => (
+              <option key={candidate.address} value={candidate.address}>{candidate.label} · {candidate.address}</option>
             ))}
           </select>
         </label>
+        {isTailnet(state) ? (
+          <div className="tailnet-notice" role="note">
+            Both devices need Tailscale access. Traffic remains WireGuard-encrypted if Tailscale uses a DERP relay.
+          </div>
+        ) : null}
         <label className={`control-row${state.features?.connectedDevices === false ? " devices-control" : ""}`}>
           <Icon name="refresh" />
           <select value={state.expiryMinutes} onChange={(event) => onExpiry(Number(event.target.value))}>
@@ -348,7 +371,7 @@ function AdminApp() {
         />
       </main>
       {state.features?.activity !== false ? <ActivityRail activities={state.activities} /> : null}
-      <footer className="privacy-footer"><Icon name="shield" />Files stay on your local network.</footer>
+      <footer className="privacy-footer"><Icon name="shield" />{isTailnet(state) ? "No Wiferry cloud storage or file relay. Tailscale carries the traffic." : "Files stay on your local network."}</footer>
     </div>
   );
 }
@@ -393,7 +416,7 @@ function GuestApp() {
       <main className="guest-main">
         <section className="guest-intro">
           <h1>{state.canDownload ? `Files from ${state.deviceName}` : `Send to ${state.deviceName}`}</h1>
-          <p>Direct over your Wi-Fi</p>
+          <p>{isTailnet(state) ? "Through your encrypted Tailscale network" : "Direct over your local network"}</p>
         </section>
         {state.canDownload ? (
           <>
@@ -423,7 +446,7 @@ function GuestApp() {
         ) : null}
         {error ? <div className="error-banner" role="alert">{error}</div> : null}
       </main>
-      <footer className="guest-footer">No cloud. {formatCountdown(state.secondsRemaining)}.</footer>
+      <footer className="guest-footer">No Wiferry cloud storage. {formatCountdown(state.secondsRemaining)}.</footer>
     </div>
   );
 }
@@ -437,7 +460,7 @@ function EndedScreen() {
         <h1>This share has ended</h1>
         <p>Ask the sender to start a new session and scan the new QR code.</p>
       </main>
-      <footer className="guest-footer">No cloud. No files remain available from this link.</footer>
+      <footer className="guest-footer">No Wiferry cloud storage. No files remain available from this link.</footer>
     </div>
   );
 }
@@ -447,7 +470,7 @@ function LoadingScreen({ error }) {
     <main className="loading-screen">
       <div className="brand">Wiferry</div>
       <div className="loading-line" />
-      <p>{error || "Connecting on your local network…"}</p>
+      <p>{error || "Connecting to Wiferry…"}</p>
     </main>
   );
 }

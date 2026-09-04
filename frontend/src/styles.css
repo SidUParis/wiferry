@@ -198,6 +198,16 @@ button { cursor: pointer; }
 .url-control span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .control-row button { border: 0; background: transparent; color: var(--blue); font-size: 12px; font-weight: 630; }
 .control-row select { width: 100%; border: 0; outline: 0; background: white; color: #4d5a70; font-size: 13px; }
+.tailnet-notice {
+  margin: 10px 0;
+  padding: 11px 12px;
+  border: 1px solid #cad8ff;
+  border-radius: 6px;
+  background: #f4f7ff;
+  color: #415274;
+  font-size: 12px;
+  line-height: 1.45;
+}
 .stop-button, .start-button {
   width: 100%; min-height: 48px; margin-top: 18px; display: flex; align-items: center; justify-content: center; gap: 9px;
   border: 1px solid var(--coral); border-radius: 6px; background: white; color: var(--coral); font-size: 14px; font-weight: 650;

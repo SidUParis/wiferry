@@ -2,7 +2,7 @@ use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::fs;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -12,7 +12,7 @@ use thiserror::Error;
 use tokio::sync::Semaphore;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::network::LocalNetwork;
+use crate::network::{self, NetworkCandidate, TransportKind};
 
 const TOKEN_BYTES: usize = 24;
 
@@ -83,12 +83,13 @@ pub struct PublicState {
     pub can_download: bool,
     pub can_upload: bool,
     pub features: Features,
+    pub transport: TransportKind,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub share_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host_ip: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub host_candidates: Option<Vec<String>>,
+    pub host_candidates: Option<Vec<NetworkCandidate>>,
 }
 
 #[derive(Debug)]
@@ -100,8 +101,8 @@ struct Inner {
     expiry_minutes: u64,
     generation: u64,
     files: Vec<FileEntry>,
-    host_ip: Ipv4Addr,
-    host_candidates: Vec<Ipv4Addr>,
+    host: NetworkCandidate,
+    host_candidates: Vec<NetworkCandidate>,
 }
 
 #[derive(Debug)]
@@ -111,7 +112,6 @@ pub struct AppState {
     pub admin_port: u16,
     pub device_name: String,
     pub temp: TempDir,
-    pub networks: Vec<LocalNetwork>,
     pub upload_slots: Semaphore,
 }
 
@@ -122,9 +122,8 @@ pub struct Authorization {
 
 impl AppState {
     pub fn new(
-        host_ip: Ipv4Addr,
-        host_candidates: Vec<Ipv4Addr>,
-        networks: Vec<LocalNetwork>,
+        host: NetworkCandidate,
+        host_candidates: Vec<NetworkCandidate>,
         port: u16,
         admin_port: u16,
         device_name: String,
@@ -140,14 +139,13 @@ impl AppState {
                 expiry_minutes,
                 generation: 0,
                 files: Vec::new(),
-                host_ip,
+                host,
                 host_candidates,
             }),
             port,
             admin_port,
             device_name,
             temp,
-            networks,
             upload_slots: Semaphore::new(2),
         })
     }
@@ -158,7 +156,15 @@ impl AppState {
 
     pub fn share_url(&self) -> String {
         let inner = self.inner.read().unwrap();
-        format!("http://{}:{}/s/{}/", inner.host_ip, self.port, inner.token)
+        format!(
+            "http://{}:{}/s/{}/",
+            inner.host.address, self.port, inner.token
+        )
+    }
+
+    pub fn guest_allowed(&self, peer: SocketAddr) -> bool {
+        let inner = self.inner.read().unwrap();
+        network::guest_allowed(peer, &inner.host)
     }
 
     pub fn public_state(&self, admin: bool) -> PublicState {
@@ -186,16 +192,15 @@ impl AppState {
                 activity: false,
                 connected_devices: false,
             },
-            share_url: admin
-                .then(|| format!("http://{}:{}/s/{}/", inner.host_ip, self.port, inner.token)),
-            host_ip: admin.then(|| inner.host_ip.to_string()),
-            host_candidates: admin.then(|| {
-                inner
-                    .host_candidates
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect()
+            transport: inner.host.kind,
+            share_url: admin.then(|| {
+                format!(
+                    "http://{}:{}/s/{}/",
+                    inner.host.address, self.port, inner.token
+                )
             }),
+            host_ip: admin.then(|| inner.host.address.to_string()),
+            host_candidates: admin.then(|| inner.host_candidates.clone()),
         }
     }
 
@@ -329,10 +334,15 @@ impl AppState {
 
     pub fn set_host_ip(&self, address: Ipv4Addr) -> Result<(), String> {
         let mut inner = self.inner.write().unwrap();
-        if !inner.host_candidates.contains(&address) {
+        let Some(candidate) = inner
+            .host_candidates
+            .iter()
+            .find(|candidate| candidate.address == address)
+            .cloned()
+        else {
             return Err("Choose an address assigned to this computer".into());
-        }
-        inner.host_ip = address;
+        };
+        inner.host = candidate;
         inner.token = random_token(TOKEN_BYTES);
         inner.generation += 1;
         Ok(())
@@ -480,16 +490,9 @@ mod tests {
 
     #[test]
     fn expiry_and_rotation_invalidate_authorization() {
-        let state = AppState::new(
-            Ipv4Addr::LOCALHOST,
-            vec![Ipv4Addr::LOCALHOST],
-            Vec::new(),
-            8765,
-            8766,
-            "Test host".into(),
-            0,
-        )
-        .unwrap();
+        let host = NetworkCandidate::loopback();
+        let state =
+            AppState::new(host.clone(), vec![host], 8765, 8766, "Test host".into(), 0).unwrap();
         let token = state.inner.read().unwrap().token.clone();
         let authorization = state.authorize(&token).unwrap();
         state.start_or_rotate();
@@ -509,5 +512,37 @@ mod tests {
             state.authorize(&current),
             Err(AccessError::NotFound)
         ));
+    }
+
+    #[test]
+    fn switching_host_changes_policy_and_rotates_capability() {
+        let lan = NetworkCandidate::lan(
+            "192.168.1.10".parse().unwrap(),
+            "255.255.255.0".parse().unwrap(),
+            "LAN",
+        );
+        let tailscale = NetworkCandidate::tailscale("100.123.32.112".parse().unwrap());
+        let state = AppState::new(
+            lan.clone(),
+            vec![lan, tailscale.clone()],
+            8765,
+            8766,
+            "Test host".into(),
+            0,
+        )
+        .unwrap();
+        let old_token = state.inner.read().unwrap().token.clone();
+
+        assert!(state.guest_allowed("192.168.1.22:8".parse().unwrap()));
+        assert!(!state.guest_allowed("100.90.1.2:8".parse().unwrap()));
+        state.set_host_ip(tailscale.address).unwrap();
+
+        assert!(matches!(
+            state.authorize(&old_token),
+            Err(AccessError::NotFound)
+        ));
+        assert_eq!(state.public_state(true).transport, TransportKind::Tailscale);
+        assert!(state.guest_allowed("100.90.1.2:8".parse().unwrap()));
+        assert!(!state.guest_allowed("192.168.1.22:8".parse().unwrap()));
     }
 }

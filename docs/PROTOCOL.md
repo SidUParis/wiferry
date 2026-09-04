@@ -15,9 +15,11 @@ http://HOST:PORT/s/TOKEN/
 base64url (192 bits). Possession grants access until expiry or revocation. The
 token is never an encryption key.
 
-The host accepts guest routes only when the transport peer address belongs to a
-subnet assigned to a local interface (or is loopback). Proxy forwarding headers
-are ignored.
+The selected host candidate carries a transport policy. `lan` accepts loopback
+or a peer in that one interface subnet. `tailscale` accepts loopback or a peer
+in `100.64.0.0/10`, and is offered only when the host has a locally confirmed
+Tailscale IPv4 address. Changing candidates rotates `TOKEN`. Proxy forwarding
+headers are ignored.
 
 ## Session manifest
 
@@ -31,6 +33,7 @@ Relevant JSON fields:
 {
   "active": true,
   "deviceName": "Example laptop",
+  "transport": "lan",
   "files": [
     {
       "id": "base64url-id",
@@ -79,7 +82,7 @@ Management uses a separate listener bound to `127.0.0.1` and is never routed by
 the LAN listener. At launch, a separate random capability is placed after `#` in
 the local management URL, so it is not transmitted in an HTTP request. The page
 stores it for that browser tab, removes it from the visible URL, and sends it as
-`X-Wiferry-Admin` on every management API request. The server also requires a
+`X-Wiferry-Admin` on every management API request. The server also requires an
 allowlisted loopback `Host` authority and rejects foreign `Origin` values on
 mutations. No HTML response embeds the capability. Guest clients cannot add
 paths, stop sharing, rotate a token, or change the advertised interface.

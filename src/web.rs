@@ -21,7 +21,6 @@ use subtle::ConstantTimeEq;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
-use crate::network;
 use crate::range::{ByteRange, parse_range};
 use crate::state::{AccessError, AppState, FileEntry, PublicFile};
 
@@ -184,8 +183,11 @@ async fn guest_index(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     Path(_token): Path<String>,
 ) -> Response {
-    if !network::guest_allowed(peer, &state.networks) {
-        return error(StatusCode::FORBIDDEN, "Client is outside the local network");
+    if !state.guest_allowed(peer) {
+        return error(
+            StatusCode::FORBIDDEN,
+            "Client is not allowed by the selected transport",
+        );
     }
     index(String::new())
 }
@@ -396,8 +398,11 @@ async fn guest_state(
     ConnectInfo(peer): ConnectInfo<SocketAddr>,
     Path(token): Path<String>,
 ) -> Response {
-    if !network::guest_allowed(peer, &state.networks) {
-        return error(StatusCode::FORBIDDEN, "Client is outside the local network");
+    if !state.guest_allowed(peer) {
+        return error(
+            StatusCode::FORBIDDEN,
+            "Client is not allowed by the selected transport",
+        );
     }
     match state.authorize(&token) {
         Ok(_) => Json(state.public_state(false)).into_response(),
@@ -412,8 +417,11 @@ async fn download(
     method: Method,
     headers: HeaderMap,
 ) -> Response {
-    if !network::guest_allowed(peer, &state.networks) {
-        return error(StatusCode::FORBIDDEN, "Client is outside the local network");
+    if !state.guest_allowed(peer) {
+        return error(
+            StatusCode::FORBIDDEN,
+            "Client is not allowed by the selected transport",
+        );
     }
     let authorization = match state.authorize(&token) {
         Ok(value) => value,

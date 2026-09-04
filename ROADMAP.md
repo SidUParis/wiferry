@@ -12,7 +12,26 @@
 - [x] First native CI pass on Linux, Windows, macOS arm64, and macOS x86-64
 - [ ] Device matrix: iOS Safari, Android Chrome, desktop browsers
 
-## 0.3: Reliable resume protocol
+## 0.2 alpha.2: Tailnet transport
+
+- [x] Detect a verified local Tailscale IPv4 address
+- [x] Scope guest authorization to the selected LAN or Tailnet transport
+- [x] Label LAN/VPN/Tailscale choices and rotate the capability on changes
+- [x] Real second-device Tailnet full-file and Range checksum test
+- [ ] Linux, Windows, and both macOS CI targets for alpha.2
+- [ ] Optional MagicDNS and Tailscale Serve HTTPS exploration
+
+## 0.3: Mobile-first Inbox and Bridge
+
+- Rust Receive/Inbox mode for phone-to-computer browser uploads
+- Separate upload and download capabilities with host approval
+- Desktop Bridge Room for iPhone-to-Android transfers without either phone
+  installing Wiferry
+- Foreground browser-to-browser WebRTC experiment for transfers without a computer
+- Optional sender-first iOS/Android companion for Share Sheet and background jobs
+- Experimental Tailcat adapter kept outside the default Rust binary
+
+## 0.4: Reliable resume protocol
 
 - Strong content ETag and `If-Range`
 - Stable resumable session manifest and file-change rejection
@@ -20,7 +39,7 @@
 - Bounded streaming ZIP or a documented per-file-only large-transfer path
 - Optional maximum completed downloads and one-time capability mode
 
-## 0.4: Trust on less-trusted LANs
+## 0.5: Trust on less-trusted networks
 
 - Explicit receiver approval or short PIN
 - Authenticated encrypted session design with an external review

@@ -2,9 +2,11 @@
 
 ## Intended deployment
 
-Wiferry 0.2 alpha is intended for trusted home, office, classroom, or personal-hotspot
-networks. It does not provide transport encryption yet. Do not use the alpha for
-sensitive files on an untrusted public Wi-Fi.
+Wiferry Nearby mode is intended for trusted home, office, classroom, or
+personal-hotspot networks and does not provide transport encryption. Tailnet
+mode is intended for devices already authorized by the same Tailscale network;
+its HTTP packets travel inside Tailscale's encrypted tunnel. Do not use Nearby
+mode for sensitive files on untrusted public Wi-Fi.
 
 ## Current controls
 
@@ -15,8 +17,12 @@ sensitive files on an untrusted public Wi-Fi.
   URL fragment, never in an HTTP request or HTML response.
 - Management routes enforce an allowlisted loopback `Host`; browser mutations reject
   foreign `Origin` values.
-- Guest requests are restricted to subnets assigned to local interfaces; forwarded
-  proxy headers are ignored.
+- Guest requests are restricted to the selected transport: the chosen LAN
+  interface subnet or, after confirming the host's Tailscale address, source
+  IPv4 addresses in `100.64.0.0/10`. This range check is not peer identity
+  authentication; Tailscale ACLs or grants remain responsible for identity.
+  Other local interfaces are not implicitly authorized, and forwarded proxy
+  headers are ignored.
 - The optional path-entry API is available only to the loopback management page
   with its separate admin capability.
 - Uploaded filenames are reduced to a safe basename and collision-renamed.
@@ -24,6 +30,18 @@ sensitive files on an untrusted public Wi-Fi.
 - Stop, expiry, and rotation invalidate the generation checked between stream chunks.
 - Browser responses disable framing, MIME sniffing, referrers, device permissions,
   cross-origin scripts, and third-party network connections.
+
+## Tailscale boundary
+
+- Wiferry does not treat an arbitrary host `100.x` address as Tailscale; the
+  advertised host address must be confirmed locally before Tailnet is offered.
+- Tailscale ACLs or grants decide which tailnet nodes can reach the host. The
+  Wiferry capability is an additional bearer authorization, not a Tailscale identity.
+- DERP may relay Tailscale traffic that remains WireGuard-encrypted. Wiferry
+  does not operate that relay or store the file.
+- Tailcat is not embedded in the default binary. Any future adapter will remain
+  experimental until its evolving wire protocol and mutually-untrusted peer
+  model have an independent review.
 
 ## Before a stable release
 
