@@ -11,7 +11,7 @@
 - Added multi-interface QR address selection.
 - Added reproducible Python-versus-Rust size, startup, RSS, and throughput benchmark.
 - Made embedded frontend timestamps deterministic for repeatable same-environment builds.
-- Prepared native Linux, Windows, macOS arm64, and macOS x86-64 prerelease builds.
+- Verified native Linux, Windows, macOS arm64, and macOS x86-64 CI builds.
 
 ## 0.1.0 - Prototype
 

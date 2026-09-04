@@ -6,9 +6,9 @@ Wiferry 是 MIT 许可证的局域网文件投递工具。它面向 Linux、macO
 Windows 主机；主机拖入文件或给出路径，其他手机、平板、电视和电脑扫描
 临时二维码后即可直接下载，不需要安装接收端。
 
-当前版本为 Rust `0.2.0-alpha.1`。Linux x86-64 已在本机真实构建和验证；
-Windows、macOS Apple Silicon 与 Intel 的构建/测试任务已经配置，但只有在
-首次公开 CI 通过后才会标记为已验证平台。
+当前版本为 Rust `0.2.0-alpha.1`。Linux x86-64、Windows x86-64、macOS
+Apple Silicon 与 Intel 已在各自原生 GitHub runner 上通过公开的前端构建、
+严格 Clippy、黑盒测试和 release 编译；首个 alpha 仍未签名或公证。
 
 ## 使用
 

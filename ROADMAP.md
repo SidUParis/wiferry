@@ -9,7 +9,7 @@
 - [x] Application-layer local-subnet guard
 - [x] Public benchmark runner and first Linux result
 - [ ] Black-box API contract suite shared by the Python and Rust engines
-- [ ] First native CI pass on Linux, Windows, macOS arm64, and macOS x86-64
+- [x] First native CI pass on Linux, Windows, macOS arm64, and macOS x86-64
 - [ ] Device matrix: iOS Safari, Android Chrome, desktop browsers
 
 ## 0.3: Reliable resume protocol

@@ -7,9 +7,9 @@ macOS, or Windows computer, add files by path or drag-and-drop, then let any
 nearby phone, tablet, TV, or computer scan an expiring QR capability link and
 download through its normal browser.
 
-> Status: `0.2.0-alpha.1`. The Rust host is implemented and verified on Linux
-> x86-64. Windows and macOS source/build jobs are included but must pass their
-> first public GitHub Actions run before their binaries are called verified.
+> Status: `0.2.0-alpha.1`. The Rust host passes native public CI on Linux
+> x86-64, Windows x86-64, macOS Apple Silicon, and macOS Intel. See the
+> [four-platform verification run](https://github.com/SidUParis/wiferry/actions/runs/33819199921).
 
 ## Why another LAN file tool?
 
@@ -125,10 +125,11 @@ It will move under `legacy-python/` after Rust contract parity is complete.
 
 ## Current compatibility boundary
 
-- Linux x86-64 Rust binary: built and locally verified.
-- Windows x86-64: source and native CI job prepared; public runner verification pending.
-- macOS Apple Silicon and Intel: native CI jobs are the release target; public
-  runner verification, signing, and notarization are pending.
+- Linux x86-64: local smoke tests and the native public runner pass. The alpha
+  artifact uses GNU/glibc; a broadly static Linux bundle remains future work.
+- Windows x86-64: native public build, Clippy, and black-box tests pass.
+- macOS Apple Silicon and Intel: both native public build/test jobs pass;
+  signing and notarization remain pending.
 - Receiver browsers: the current iPhone/Safari LAN path and desktop browser path
   have been exercised; broader browser/device results will be published as a matrix.
 
