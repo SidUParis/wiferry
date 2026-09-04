@@ -115,15 +115,74 @@ jobs:
             (cd release && sha256sum -c "${archive}.sha256")
           done
           test "$(find release -maxdepth 1 -type f | wc -l)" -eq 8
-      - name: Create draft release
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --draft --title "Wiferry $GITHUB_REF_NAME"
+      - name: Ensure a recoverable draft release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}"
+          if release_json="$(gh api "$endpoint" -H "X-GitHub-Api-Version: 2026-03-10" 2>/dev/null)"; then
+            if test "$(jq -r .draft <<<"$release_json")" = true; then
+              echo "state=draft" >> "$GITHUB_OUTPUT"
+            elif test "$(jq -r '.immutable // false' <<<"$release_json")" = true; then
+              echo "state=published" >> "$GITHUB_OUTPUT"
+            else
+              echo "A mutable published release already exists for ${GITHUB_REF_NAME}" >&2
+              exit 1
+            fi
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --draft --title "Wiferry $GITHUB_REF_NAME"
+            echo "state=draft" >> "$GITHUB_OUTPUT"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Upload release assets
-        run: gh release upload "$GITHUB_REF_NAME" release/*
+        if: steps.release.outputs.state == 'draft'
+        run: gh release upload "$GITHUB_REF_NAME" release/* --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Verify draft asset inventory
+        if: steps.release.outputs.state == 'draft'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
+          find release -maxdepth 1 -type f -printf '%f\n' | sort > "$RUNNER_TEMP/local-assets.txt"
+          gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > "$RUNNER_TEMP/remote-assets.txt"
+          diff -u "$RUNNER_TEMP/local-assets.txt" "$RUNNER_TEMP/remote-assets.txt"
+          test "$(wc -l < "$RUNNER_TEMP/remote-assets.txt")" -eq 8
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Publish immutable prerelease
+        if: steps.release.outputs.state == 'draft'
         run: gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Verify published immutable release
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="repos/${GITHUB_REPOSITORY}/releases/tags/${GITHUB_REF_NAME}"
+          release_json=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            release_json="$(gh api "$endpoint" -H "X-GitHub-Api-Version: 2026-03-10")"
+            if test "$(jq -r '.immutable // false' <<<"$release_json")" = true; then
+              break
+            fi
+            sleep 2
+          done
+          jq -e '.draft == false and .prerelease == true and .immutable == true' <<<"$release_json"
+          published="$RUNNER_TEMP/published-release"
+          mkdir -p "$published"
+          gh release download "$GITHUB_REF_NAME" --dir "$published"
+          test "$(find "$published" -maxdepth 1 -type f | wc -l)" -eq 8
+          for checksum in "$published"/*.sha256; do
+            (cd "$published" && sha256sum -c "$(basename "$checksum")")
+          done
+          if test "${{ steps.release.outputs.state }}" = draft; then
+            for local_asset in release/*; do
+              cmp "$local_asset" "$published/$(basename "$local_asset")"
+            done
+          fi
         env:
           GH_TOKEN: ${{ github.token }}

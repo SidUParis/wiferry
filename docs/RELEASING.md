@@ -18,6 +18,9 @@ workflow. Do not upload locally built binaries to a public release.
 6. Because immutable releases are enabled, the workflow creates a draft,
    uploads all eight assets, and only then publishes it as a prerelease. GitHub
    locks the published tag and assets and creates a release attestation.
+7. A rerun resumes an existing draft and replaces its full asset set before
+   publication. If the release is already immutable, the rerun downloads it,
+   verifies the four checksum pairs, and exits without attempting mutation.
 
 ## Expected assets
 
