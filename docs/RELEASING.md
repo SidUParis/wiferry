@@ -13,8 +13,11 @@ workflow. Do not upload locally built binaries to a public release.
 4. The release workflow rebuilds and tests the frontend and Rust host on each
    native runner. Its smoke test shares a filename containing spaces and Unicode,
    then verifies SHA-256 for both a full download and a cross-chunk HTTP Range.
-5. The publish job requires exactly four archives and their four checksum files,
-   verifies every checksum again, and creates a GitHub prerelease.
+5. The publish job requires exactly four archives and their four checksum files
+   and verifies every checksum again.
+6. Because immutable releases are enabled, the workflow creates a draft,
+   uploads all eight assets, and only then publishes it as a prerelease. GitHub
+   locks the published tag and assets and creates a release attestation.
 
 ## Expected assets
 
